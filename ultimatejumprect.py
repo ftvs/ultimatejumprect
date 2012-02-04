@@ -5,6 +5,7 @@ from __future__ import with_statement # might want to detect <2.6
 import sys
 import os
 import pygame
+import random
 #import threading
 from pygame.locals import *
 
@@ -14,27 +15,16 @@ if not pygame.mixer: print('warning, sound disabled')
 
 #! /usr/bin/env python
 
-#def ableToJump():
-#    if (playerRect.left < 1  # wall jumps
-#        or playerRect.right > SCRWIDTH - 1):
-        # might need px perfect collision first, depends on implementation
+def ableToJump():
+     if (playerRect.left < 3  # wall jumps
+            or playerRect.right > SCRWIDTH - 3
+            or playerRect.bottom > SCRHEIGHT - 2):
+         # might need px perfect collision first, depends on implementation
+         return True
+     else:
+         return False
 
 SCRWIDTH, SCRHEIGHT = 640, 480
-
-##class PlayerRect(Rect):
-##    def __init__(self):
-##        Rect.__init__(self)
-##        # self.rect = pygame.Rect(5, 5, 5, 5)
-##        self.top, self.left, self.bottom, self.right = 5, 5, 5, 5
-##        self.prevLeft = 5
-##        self.prevTop = 5
-##
-##    def wallCollide(self):
-##        if self.top < 0 or self.bottom > SCRWIDTH:
-##            self.top = self.prevTop
-##
-##        if self.left < 0 or self.right > SCRHEIGHT:
-##            self.left = self.prevLeft
 
 clock = pygame.time.Clock()
 fpslimit = 60 # fps limit
@@ -77,8 +67,9 @@ class Player:
 
 RECTLEFT = RECTTOP = RECTWIDTH = RECTHEIGHT = 32
 playerRect = pygame.Rect(RECTLEFT, RECTTOP, RECTWIDTH, RECTHEIGHT) 
-blockcolor = (255, 0, 0)
-playercolor = (255, 255, 255)
+blockcolor = (255, 0, 0) # red
+playercolor = (255, 255, 255) # white
+goalcolor = (0, 0, 255) # blue
 
 prevLeft = prevTop = 5  # hold prev coords. used for collisions
 playerXspeed = playerYspeed = 0
@@ -93,9 +84,6 @@ LEFT = K_s
 RIGHT = K_f
 DOWN = K_d
 
-# test collision box
-#====================
-#collisionbox = pygame.Rect(400, 400, 100, 100)
 tilemap = tilemap.Tilemap()
 solidtiles = []
 
@@ -106,12 +94,39 @@ for i, row in enumerate(tilemap.maplines):
                                 tilemap.tilewidth,       tilemap.tileheight)
             solidtiles.append(block)
 
+# array of numbers to test with goal rect moving.
+goalRectPositions = []
 
-print(str(playerRect.top))
-print(str(playerRect.left))
+random.seed(1)
+
+for i in range(5):
+    maxX = SCRWIDTH / RECTWIDTH - 2
+    maxY = SCRHEIGHT / RECTHEIGHT - 2
+
+    newGoalX, newGoalY = random.randint(1, maxX), random.randint(1, maxY)
+
+    # always check if legal
+    while tilemap.at(newGoalX * RECTWIDTH,
+                     newGoalY * RECTHEIGHT) == "1":
+        print("rejected: " + str(newGoalX) + ", " + str(newGoalY))
+        newGoalX = random.randint(1, maxX)
+        newGoalY = random.randint(1, maxY)
+
+    goalRectPositions.append((newGoalX, newGoalY))
+
+goalRect = pygame.Rect( RECTWIDTH*newGoalX, RECTHEIGHT*newGoalY,
+                        RECTWIDTH, RECTHEIGHT) 
+goalRectPosTried = 0;
+goalRectPosIndexToTry = goalRectPosTried;
+
+#print(str(playerRect.top))
+#print(str(playerRect.left))
 
 screen = pygame.display.set_mode((SCRWIDTH, SCRHEIGHT))
 
+# game state constants
+STATE_PAUSE = 0
+STATE_GAME_IN_PROGRESS = 1
 
 # gameloop
 #============
@@ -125,55 +140,56 @@ while running:
             running = False
         # elif event.type == pygame.MOUSEMOTION:
             # print "mouse at (%d, %d)" % event.pos
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            print "mouse at (%d, %d)" % event.pos
+        # elif event.type == pygame.MOUSEBUTTONDOWN:
+            # print "mouse at (%d, %d)" % event.pos # DEBUG
         #______________________________________________________________________
         #
         # Key events and control
         #______________________________________________________________________
         #
         elif event.type == KEYDOWN:
-            print "key pressed: " + str(event.key) # ???
+            # print "key pressed: " + str(event.key) # ??? # DEBUG
             if event.key == K_ESCAPE:
                 running = False
 
             if event.key == LEFT:
-                print "a pressed, leftspeed +"
+                # print "a pressed, leftspeed +" # DEBUG
                 playerXspeed += -5 # playerRect.move_ip(-5, 0)
             if event.key == RIGHT:
-                print "d pressed, rightspeed +"
+                # print "d pressed, rightspeed +" # DEBUG
                 playerXspeed += 5
                 # playerRect.move_ip(5, 0)
 
             # jump. the Gravity section prevents jump craziness. collision
             # section resets the jumped variable to allow jumping again
-            if event.key == JUMP and (jumped == False 
-                                        or playerRect.left < 3  # wall jumps
-                                        or playerRect.right > SCRWIDTH - 3):
-                print "w pressed, upspeed +"
+            if event.key == JUMP and ((not jumped) or ableToJump()):
+                # print "w pressed, upspeed +" # DEBUG
                 jumping = True
                 jumpframes = 0
-                playerYspeed = -5
-                jumped = True
+                playerYspeed = -10
             if event.key == DOWN:
-                print "s pressed, downspeed +"
+                # print "s pressed, downspeed +" # DEBUG
                 playerYspeed += 5
 
         if event.type == KEYUP:
-            print "key released: " + str(event.key) # ???
+            # print "key released: " + str(event.key) # ??? # DEBUG
             if event.key == LEFT:
-                print "a released, leftspeed -"
+                # print "a released, leftspeed -" # DEBUG
                 playerXspeed += 5 # playerRect.move_ip(-5, 0)
             if event.key == RIGHT:
-                print "d released, rightspeed -"
+                # print "d released, rightspeed -" # DEBUG
                 playerXspeed += -5
             if event.key == JUMP:
-                print "w released, upspeed -"
+                # print "w released, upspeed -" # DEBUG
                 jumping = False
                 jumpframes = 0
             if event.key == DOWN:
-                print "s released, downspeed -"
+                # print "s released, downspeed -" # DEBUG
                 playerYspeed += -5
+
+    # regardless of whether or not i jumped. it should become false again
+    # within this loop if i'm in contact with something.
+    jumped = True
 
     if jumping:
         jumpframes += 1
@@ -184,12 +200,17 @@ while running:
     #__________________________________________________________
     # gravity if i've jumped too long
     # no gravity during jump or if too fast
-    if (playerYspeed < 6 and not jumping) or jumpframes > 20:
+    if (playerYspeed < 3 and not jumping) or jumpframes > 10:
         playerYspeed += 1 # gravity
         jumpframes = 0
         jumping = False
-        print('gravity!')
+        # print('gravity!') # DEBUG
 
+    #__________________________________________________________
+    #
+    # Tile collision
+    #__________________________________________________________
+    #
     playerRect.move_ip(0, playerYspeed) # move based on speed
     if tilemap.in_collision(playerRect): # Y axis collision
         if playerYspeed > 0: # came from top
@@ -199,32 +220,18 @@ while running:
         elif playerYspeed < 0: # came from bottom
             playerRect.top = int((playerRect.top + tilemap.tileheight)
                                 / tilemap.tileheight) * tilemap.tileheight
-            jumped = False
-
-    # other object vertical collision
-    #__________________________________________________________
-#    if playerRect.colliderect(collisionbox):
-#        if (collisionbox.top < playerRect.bottom
-#                or collisionbox.bottom > playerRect.top):
-#            playerRect.top = prevTop
-#
-#        jumped = False
+            # jumped = False    # this would be interesting ceiling jumping
 
     playerRect.move_ip(playerXspeed, 0) # move based on speed
     if tilemap.in_collision(playerRect): # X axis collision
         if playerXspeed > 0: # came from left
             playerRect.left = int((playerRect.left)
                                 / tilemap.tilewidth) * tilemap.tilewidth
+            jumped = False
         elif playerXspeed < 0: # came from right
             playerRect.left = int((playerRect.left + tilemap.tilewidth)
                                 / tilemap.tilewidth) * tilemap.tilewidth
-
-    # Other object horizontal collision
-    #__________________________________________________________
-#    if playerRect.colliderect(collisionbox):
-#        if (collisionbox.left < playerRect.right
-#                or collisionbox.right > playerRect.left):
-#            playerRect.left = prevLeft
+            jumped = False
 
     #__________________________________________________________
     #
@@ -240,18 +247,37 @@ while running:
 
     # left/right boundaries
     if playerRect.left < 0:
-        playerRect.left = 0
+        playerRect.left = -1
     if playerRect.right > SCRWIDTH:
-        playerRect.left = SCRWIDTH - playerRect.width + 1
+        playerRect.left = SCRWIDTH - playerRect.width - 1
     prevTop = playerRect.top
     prevLeft = playerRect.left
 
+    # hit goal, create new goal
+    if playerRect.colliderect(goalRect):
+        maxX = SCRWIDTH / RECTWIDTH - 2
+        maxY = SCRHEIGHT / RECTHEIGHT - 2
+
+        newGoalX, newGoalY = (goalRectPositions[goalRectPosIndexToTry][0],
+                                goalRectPositions[goalRectPosIndexToTry][1])
+        goalRectPosTried = goalRectPosTried + 1
+        goalRectPosIndexToTry = goalRectPosTried % len(goalRectPositions)
+        print("Goals hit: " + str(goalRectPosTried) +
+                ". Goal array index: " + str(goalRectPosIndexToTry))
+
+        goalRect.topleft = (RECTWIDTH * newGoalX,
+                            RECTHEIGHT * newGoalY)
+        # print("newgoalx, newgoaly: " + str(newGoalX) + " " + str(newGoalY))
+        # print("maxX, maxY: " + str(maxX) + " " + str(maxY))
+        # print("new goalRect.topleft: " + str(goalRect.topleft))
+
     # redraw whole screen
     screen.fill((0, 0, 0))
-    pygame.draw.rect(screen, playercolor, playerRect)
     for eachtile in solidtiles:
         screen.fill(blockcolor, eachtile)
     #pygame.draw.rect(screen, (255, 0, 0), collisionbox)
+    pygame.draw.rect(screen, playercolor, playerRect)
+    pygame.draw.rect(screen, goalcolor, goalRect)
     pygame.display.flip()
 
     clock.tick(fpslimit)
