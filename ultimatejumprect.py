@@ -14,6 +14,7 @@ if not pygame.font: print('warning, fonts disabled')
 if not pygame.mixer: print('warning, sound disabled')
 
 #! /usr/bin/env python
+pygame.init()
 
 def ableToJump():
      if (playerRect.left < 3  # wall jumps
@@ -28,6 +29,7 @@ SCRWIDTH, SCRHEIGHT = 640, 480
 
 clock = pygame.time.Clock()
 fpslimit = 60 # fps limit
+PAUSEFPS = 15 # fps when paused
 
 class Player:
     def __init__(self, size = 5, startcoords = 460, prevCoord = 5, speed = 0):
@@ -71,6 +73,10 @@ blockcolor = (255, 0, 0) # red
 playercolor = (255, 255, 255) # white
 goalcolor = (0, 0, 255) # blue
 
+# color constants
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+
 prevLeft = prevTop = 5  # hold prev coords. used for collisions
 playerXspeed = playerYspeed = 0
 jumping = False # True while rising from jump
@@ -79,10 +85,12 @@ jumpframes = 0  # how long i've jumped. gotta stop rising from jump eventually
 
 # controls
 #====================
-JUMP = K_k
-LEFT = K_s
-RIGHT = K_f
-DOWN = K_d
+JUMPKEY = K_k
+LEFTKEY = K_s
+RIGHTKEY = K_f
+DOWNKEY = K_d
+QUITKEY = K_ESCAPE
+PAUSEKEY = K_p
 
 tilemap = tilemap.Tilemap()
 solidtiles = []
@@ -128,6 +136,41 @@ screen = pygame.display.set_mode((SCRWIDTH, SCRHEIGHT))
 STATE_PAUSE = 0
 STATE_GAME_IN_PROGRESS = 1
 
+gamestate = STATE_GAME_IN_PROGRESS
+
+# Pausing. Come in here when pause button is pressed.
+def pauseloop():
+    print("paused")
+    global playerXspeed
+    global gamestate
+    playerXspeed = 0
+    gamestate = STATE_PAUSE
+
+    # stay in this pause loop till game resumes.
+    while gamestate == STATE_PAUSE:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                gamestate = STATE_GAME_IN_PROGRESS
+                # running = False
+            elif event.type == KEYDOWN:
+                if event.key == QUITKEY:
+                    gamestate = STATE_GAME_IN_PROGRESS
+                    # running = False
+                elif event.key == K_p:
+                    gamestate = STATE_GAME_IN_PROGRESS
+
+        # pause msg
+        if pygame.font:
+            font = pygame.font.Font(None, 36)
+            pausemsg = font.render("PAUSE", False, WHITE)
+            msgpos = pausemsg.get_rect(center=(SCRWIDTH/2, SCRHEIGHT - 100))
+            screen.blit(pausemsg, msgpos)
+            pygame.display.flip()
+
+        # PAUSEFPS can be less than 40 because there's no need for instant
+        # input response.
+        clock.tick(PAUSEFPS)
+
 # gameloop
 #============
 frames = 0
@@ -149,41 +192,46 @@ while running:
         #
         elif event.type == KEYDOWN:
             # print "key pressed: " + str(event.key) # ??? # DEBUG
-            if event.key == K_ESCAPE:
+            if event.key == QUITKEY:
                 running = False
 
-            if event.key == LEFT:
+            if event.key == LEFTKEY:
                 # print "a pressed, leftspeed +" # DEBUG
                 playerXspeed += -5 # playerRect.move_ip(-5, 0)
-            if event.key == RIGHT:
+            if event.key == RIGHTKEY:
                 # print "d pressed, rightspeed +" # DEBUG
                 playerXspeed += 5
                 # playerRect.move_ip(5, 0)
 
             # jump. the Gravity section prevents jump craziness. collision
             # section resets the jumped variable to allow jumping again
-            if event.key == JUMP and ((not jumped) or ableToJump()):
+            if event.key == JUMPKEY and ((not jumped) or ableToJump()):
                 # print "w pressed, upspeed +" # DEBUG
                 jumping = True
                 jumpframes = 0
                 playerYspeed = -10
-            if event.key == DOWN:
+            if event.key == DOWNKEY:
                 # print "s pressed, downspeed +" # DEBUG
                 playerYspeed += 5
 
+            # Pause. Key down/up does not mess up movement when coming out
+            # of pause because they check for speed before trying to move
+            # strangely.
+            if event.key == PAUSEKEY:
+                pauseloop()
         if event.type == KEYUP:
             # print "key released: " + str(event.key) # ??? # DEBUG
-            if event.key == LEFT:
+            if event.key == LEFTKEY and playerXspeed < -4:
                 # print "a released, leftspeed -" # DEBUG
                 playerXspeed += 5 # playerRect.move_ip(-5, 0)
-            if event.key == RIGHT:
+            if event.key == RIGHTKEY and playerXspeed > 4:
                 # print "d released, rightspeed -" # DEBUG
                 playerXspeed += -5
-            if event.key == JUMP:
+            if event.key == JUMPKEY:
                 # print "w released, upspeed -" # DEBUG
                 jumping = False
                 jumpframes = 0
-            if event.key == DOWN:
+            if event.key == DOWNKEY:
                 # print "s released, downspeed -" # DEBUG
                 playerYspeed += -5
 
@@ -272,7 +320,7 @@ while running:
         # print("new goalRect.topleft: " + str(goalRect.topleft))
 
     # redraw whole screen
-    screen.fill((0, 0, 0))
+    screen.fill(BLACK)
     for eachtile in solidtiles:
         screen.fill(blockcolor, eachtile)
     #pygame.draw.rect(screen, (255, 0, 0), collisionbox)
@@ -293,13 +341,6 @@ pygame.quit()
     # K_a           a
     # K_b           b
     # K_c           c
-    # K_d           d
-    # K_e           e
-    # K_f           f
-    # K_g           g
-    # K_h           h
-    # K_i           i
-    # K_j           j
 # http://eli.thegreenplace.net/2008/12/13/writing-a-game-in-python-with-pygame-part-i/
 # http://lorenzod8n.wordpress.com/2007/05/25/pygame-tutorial-1-getting-started/
 # http://en.wordpress.com/tag/pygame-tutorial/
