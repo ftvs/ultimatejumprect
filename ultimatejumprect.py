@@ -92,6 +92,7 @@ DOWNKEY = K_d
 QUITKEY = K_ESCAPE
 PAUSEKEY = K_p
 
+# set up tilemap
 tilemap = tilemap.Tilemap()
 solidtiles = []
 
@@ -107,6 +108,7 @@ goalRectPositions = []
 
 random.seed(1)
 
+# fill goalRectPositions with coords to try
 for i in range(5):
     maxX = SCRWIDTH / RECTWIDTH - 2
     maxY = SCRHEIGHT / RECTHEIGHT - 2
@@ -124,9 +126,10 @@ for i in range(5):
 
 goalRect = pygame.Rect( RECTWIDTH*newGoalX, RECTHEIGHT*newGoalY,
                         RECTWIDTH, RECTHEIGHT) 
-goalRectPosTried = 0;
-goalRectPosIndexToTry = goalRectPosTried;
+goalRectsHit = 0;
+goalRectPosIndexToTry = goalRectsHit;
 
+timepassed = 0
 #print(str(playerRect.top))
 #print(str(playerRect.left))
 
@@ -135,15 +138,17 @@ screen = pygame.display.set_mode((SCRWIDTH, SCRHEIGHT))
 # game state constants
 STATE_PAUSE = 0
 STATE_GAME_IN_PROGRESS = 1
+STATE_GAMEOVER = 2
 
 gamestate = STATE_GAME_IN_PROGRESS
 
-# Pausing. Come in here when pause button is pressed.
-def pauseloop():
-    print("paused")
+# Pause loop. Come in here when pause button is pressed.
+#=======================================================
+def pause(pausetext):
+    # print("paused")
     global playerXspeed
     global gamestate
-    playerXspeed = 0
+    playerXspeed = 0 # prevent weirdness when pausing with a movement key down
     gamestate = STATE_PAUSE
 
     # stay in this pause loop till game resumes.
@@ -162,7 +167,7 @@ def pauseloop():
         # pause msg
         if pygame.font:
             font = pygame.font.Font(None, 36)
-            pausemsg = font.render("PAUSE", False, WHITE)
+            pausemsg = font.render(str(pausetext), False, WHITE, BLACK)
             msgpos = pausemsg.get_rect(center=(SCRWIDTH/2, SCRHEIGHT - 100))
             screen.blit(pausemsg, msgpos)
             pygame.display.flip()
@@ -218,7 +223,7 @@ while running:
             # of pause because they check for speed before trying to move
             # strangely.
             if event.key == PAUSEKEY:
-                pauseloop()
+                pause("GAME PAUSED")
         if event.type == KEYUP:
             # print "key released: " + str(event.key) # ??? # DEBUG
             if event.key == LEFTKEY and playerXspeed < -4:
@@ -308,10 +313,10 @@ while running:
 
         newGoalX, newGoalY = (goalRectPositions[goalRectPosIndexToTry][0],
                                 goalRectPositions[goalRectPosIndexToTry][1])
-        goalRectPosTried = goalRectPosTried + 1
-        goalRectPosIndexToTry = goalRectPosTried % len(goalRectPositions)
-        print("Goals hit: " + str(goalRectPosTried) +
-                ". Goal array index: " + str(goalRectPosIndexToTry))
+        goalRectsHit = goalRectsHit + 1
+        goalRectPosIndexToTry = goalRectsHit % len(goalRectPositions)
+        # print("Goals hit: " + str(goalRectsHit) +
+                # ". Goal array index: " + str(goalRectPosIndexToTry))
 
         goalRect.topleft = (RECTWIDTH * newGoalX,
                             RECTHEIGHT * newGoalY)
@@ -328,12 +333,17 @@ while running:
     pygame.draw.rect(screen, goalcolor, goalRect)
     pygame.display.flip()
 
-    clock.tick(fpslimit)
+    timepassed += clock.tick(fpslimit)
 
     frames += 1
     if frames > 60:
         pygame.display.set_caption(str(clock.get_fps()) + ' fps')
         frames = 0
+
+    if timepassed > 10 * 1000:
+        pause("GAME OVER. SCORE: " + str(goalRectsHit))
+        timepassed = 0
+        goalRectsHit = 0
 
 # be idle friendly
 pygame.quit()
