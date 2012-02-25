@@ -31,6 +31,9 @@ clock = pygame.time.Clock()
 fpslimit = 60 # fps limit
 PAUSEFPS = 15 # fps when paused
 
+# length of a game in seconds
+GAMELENGTH = 30
+
 class Player:
     def __init__(self, size = 5, startcoords = 460, prevCoord = 5, speed = 0):
         self.RECTLEFT = self.RECTTOP = startcoords
@@ -92,6 +95,9 @@ DOWNKEY = K_d
 QUITKEY = K_ESCAPE
 PAUSEKEY = K_p
 
+MOVEKEYSSTR = (pygame.key.name(LEFTKEY) + pygame.key.name(DOWNKEY)
+                + pygame.key.name(RIGHTKEY))
+
 # set up tilemap
 tilemap = tilemap.Tilemap()
 solidtiles = []
@@ -143,8 +149,10 @@ STATE_GAMEOVER = 2
 gamestate = STATE_GAME_IN_PROGRESS
 
 # Pause loop. Come in here when pause button is pressed.
+# Variable number of arguments. Each argument is a separate line. This is due
+# to pygame not handling line wrapping or newlines.
 #=======================================================
-def pause(pausetext):
+def pause(*pausetext):
     # print("paused")
     global playerXspeed
     global gamestate
@@ -167,14 +175,26 @@ def pause(pausetext):
         # pause msg
         if pygame.font:
             font = pygame.font.Font(None, 36)
-            pausemsg = font.render(str(pausetext), False, WHITE, BLACK)
-            msgpos = pausemsg.get_rect(center=(SCRWIDTH/2, SCRHEIGHT - 100))
-            screen.blit(pausemsg, msgpos)
+            i = 0
+
+            for eachline in pausetext:
+                pausemsg = font.render(str(eachline), False, WHITE, BLACK)
+                msgpos = pausemsg.get_rect(center=(SCRWIDTH/2,
+                                                    SCRHEIGHT/2 + i * 50))
+                screen.blit(pausemsg, msgpos)
+                i += 1
+
             pygame.display.flip()
 
         # PAUSEFPS can be less than 40 because there's no need for instant
         # input response.
         clock.tick(PAUSEFPS)
+
+#pause("HIT AS MANY BLUE SQUARES AS YOU CAN! CONTROLS: esdf TO MOVE, k TO JUMP")
+pause("HIT THE BLUE SQUARES! " + MOVEKEYSSTR + " TO MOVE, "
+        + pygame.key.name(JUMPKEY) + " TO JUMP.",
+        "PRESS " + pygame.key.name(PAUSEKEY) + " TO START.",
+        "YOU hAVE " + str(GAMELENGTH) + " SECONDS.")
 
 # gameloop
 #============
@@ -267,10 +287,13 @@ while running:
     playerRect.move_ip(0, playerYspeed) # move based on speed
     if tilemap.in_collision(playerRect): # Y axis collision
         if playerYspeed > 0: # came from top
+            # move player up to fit the tile instead of overlapping the bottom
+            # tile
             playerRect.top = int((playerRect.top)
                                 / tilemap.tileheight) * tilemap.tileheight
             jumped = False
         elif playerYspeed < 0: # came from bottom
+            # move player down instead of overlapping the top tile
             playerRect.top = int((playerRect.top + tilemap.tileheight)
                                 / tilemap.tileheight) * tilemap.tileheight
             # jumped = False    # this would be interesting ceiling jumping
@@ -340,8 +363,9 @@ while running:
         pygame.display.set_caption(str(clock.get_fps()) + ' fps')
         frames = 0
 
-    if timepassed > 10 * 1000:
-        pause("GAME OVER. SCORE: " + str(goalRectsHit))
+    if timepassed > GAMELENGTH * 1000:
+        pause("GAME OVER. SCORE: " + str(goalRectsHit) + ". PRESS " +
+                pygame.key.name(PAUSEKEY) + " TO CONTINUE.")
         timepassed = 0
         goalRectsHit = 0
 
