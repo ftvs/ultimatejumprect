@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/python
 
 # Tested and implemented on Python 2.5.4 and Pygame 1.9.1
 from __future__ import with_statement # might want to detect <2.6
@@ -32,7 +32,7 @@ fpslimit = 60 # fps limit
 PAUSEFPS = 15 # fps when paused
 
 # length of a game in seconds
-GAMELENGTH = 30
+GAMELENGTH = 15
 
 class Player:
     def __init__(self, size = 5, startcoords = 460, prevCoord = 5, speed = 0):
@@ -194,7 +194,7 @@ def pause(*pausetext):
 pause("HIT THE BLUE SQUARES! " + MOVEKEYSSTR + " TO MOVE, "
         + pygame.key.name(JUMPKEY) + " TO JUMP.",
         "PRESS " + pygame.key.name(PAUSEKEY) + " TO START.",
-        "YOU hAVE " + str(GAMELENGTH) + " SECONDS.")
+        "YOU HAVE " + str(GAMELENGTH) + " SECONDS.")
 
 # gameloop
 #============
