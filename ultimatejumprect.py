@@ -194,7 +194,7 @@ def pause(*pausetext):
 pause("HIT THE BLUE SQUARES! " + MOVEKEYSSTR + " TO MOVE, "
         + pygame.key.name(JUMPKEY) + " TO JUMP.",
         "PRESS " + pygame.key.name(PAUSEKEY) + " TO START.",
-        "YOU hAVE " + str(GAMELENGTH) + " SECONDS.")
+        "YOU HAVE " + str(GAMELENGTH) + " SECONDS.")
 
 # gameloop
 #============
