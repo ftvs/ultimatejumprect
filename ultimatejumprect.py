@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/python
 
 # Tested and implemented on Python 2.5.4 and Pygame 1.9.1
 from __future__ import with_statement # might want to detect <2.6
@@ -32,7 +32,7 @@ fpslimit = 60 # fps limit
 PAUSEFPS = 15 # fps when paused
 
 # length of a game in seconds
-GAMELENGTH = 30
+GAMELENGTH = 15
 
 class Player:
     def __init__(self, size = 5, startcoords = 460, prevCoord = 5, speed = 0):
@@ -85,6 +85,7 @@ playerXspeed = playerYspeed = 0
 jumping = False # True while rising from jump
 jumped = False  # indicate already jumped, prevent infinite jumps
 jumpframes = 0  # how long i've jumped. gotta stop rising from jump eventually
+movespeed = 5   # horizontal movement speed
 
 # controls
 #====================
@@ -190,6 +191,39 @@ def pause(*pausetext):
         # input response.
         clock.tick(PAUSEFPS)
 
+def checkGoalCollision():
+    global playerRect
+    global playerXspeed
+    global movespeed
+    global goalRect
+    global maxX
+    global maxY
+    global newGoalX
+    global newGoalY
+    global goalRectsHit
+    global goalRectPositions
+    global goalRectPosIndexToTry
+
+    # hit goal, create new goal
+    if playerRect.colliderect(goalRect):
+        maxX = SCRWIDTH / RECTWIDTH - 2
+        maxY = SCRHEIGHT / RECTHEIGHT - 2
+
+        newGoalX, newGoalY = (goalRectPositions[goalRectPosIndexToTry][0],
+                                goalRectPositions[goalRectPosIndexToTry][1])
+        goalRectsHit = goalRectsHit + 1
+        goalRectPosIndexToTry = goalRectsHit % len(goalRectPositions)
+        # print("Goals hit: " + str(goalRectsHit) +
+                # ". Goal array index: " + str(goalRectPosIndexToTry))
+
+        goalRect.topleft = (RECTWIDTH * newGoalX,
+                            RECTHEIGHT * newGoalY)
+
+        movespeed += 1
+        # print("newgoalx, newgoaly: " + str(newGoalX) + " " + str(newGoalY))
+        # print("maxX, maxY: " + str(maxX) + " " + str(maxY))
+        # print("new goalRect.topleft: " + str(goalRect.topleft))
+
 #pause("HIT AS MANY BLUE SQUARES AS YOU CAN! CONTROLS: esdf TO MOVE, k TO JUMP")
 pause("HIT THE BLUE SQUARES! " + MOVEKEYSSTR + " TO MOVE, "
         + pygame.key.name(JUMPKEY) + " TO JUMP.",
@@ -222,10 +256,10 @@ while running:
 
             if event.key == LEFTKEY:
                 # print "a pressed, leftspeed +" # DEBUG
-                playerXspeed += -5 # playerRect.move_ip(-5, 0)
+                playerXspeed += -movespeed # playerRect.move_ip(-5, 0)
             if event.key == RIGHTKEY:
                 # print "d pressed, rightspeed +" # DEBUG
-                playerXspeed += 5
+                playerXspeed += movespeed
                 # playerRect.move_ip(5, 0)
 
             # jump. the Gravity section prevents jump craziness. collision
@@ -248,10 +282,12 @@ while running:
             # print "key released: " + str(event.key) # ??? # DEBUG
             if event.key == LEFTKEY and playerXspeed < -4:
                 # print "a released, leftspeed -" # DEBUG
-                playerXspeed += 5 # playerRect.move_ip(-5, 0)
+                # playerXspeed += movespeed # playerRect.move_ip(-5, 0)
+                playerXspeed = 0
             if event.key == RIGHTKEY and playerXspeed > 4:
                 # print "d released, rightspeed -" # DEBUG
-                playerXspeed += -5
+                # playerXspeed += -movespeed
+                playerXspeed = 0
             if event.key == JUMPKEY:
                 # print "w released, upspeed -" # DEBUG
                 jumping = False
@@ -329,23 +365,7 @@ while running:
     prevTop = playerRect.top
     prevLeft = playerRect.left
 
-    # hit goal, create new goal
-    if playerRect.colliderect(goalRect):
-        maxX = SCRWIDTH / RECTWIDTH - 2
-        maxY = SCRHEIGHT / RECTHEIGHT - 2
-
-        newGoalX, newGoalY = (goalRectPositions[goalRectPosIndexToTry][0],
-                                goalRectPositions[goalRectPosIndexToTry][1])
-        goalRectsHit = goalRectsHit + 1
-        goalRectPosIndexToTry = goalRectsHit % len(goalRectPositions)
-        # print("Goals hit: " + str(goalRectsHit) +
-                # ". Goal array index: " + str(goalRectPosIndexToTry))
-
-        goalRect.topleft = (RECTWIDTH * newGoalX,
-                            RECTHEIGHT * newGoalY)
-        # print("newgoalx, newgoaly: " + str(newGoalX) + " " + str(newGoalY))
-        # print("maxX, maxY: " + str(maxX) + " " + str(maxY))
-        # print("new goalRect.topleft: " + str(goalRect.topleft))
+    checkGoalCollision();
 
     # redraw whole screen
     screen.fill(BLACK)
@@ -359,15 +379,21 @@ while running:
     timepassed += clock.tick(fpslimit)
 
     frames += 1
+
+    # every 1 second (every 60 frames, actually. which should be 1 second)
     if frames > 60:
         pygame.display.set_caption(str(clock.get_fps()) + ' fps')
         frames = 0
+
+        if playerXspeed < -5 or playerXspeed > 5:
+            playerXspeed *= 0.9
 
     if timepassed > GAMELENGTH * 1000:
         pause("GAME OVER. SCORE: " + str(goalRectsHit) + ". PRESS " +
                 pygame.key.name(PAUSEKEY) + " TO CONTINUE.")
         timepassed = 0
         goalRectsHit = 0
+        movespeed = 5
 
 # be idle friendly
 pygame.quit()
